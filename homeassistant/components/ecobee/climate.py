@@ -325,6 +325,14 @@ class Thermostat(ClimateEntity):
             for comfort in self.thermostat["program"]["climates"]
         }
         self._fan_modes = [FAN_AUTO, FAN_ON]
+
+        if self.thermostat["settings"]["hasHumidifier"]:
+            self._humidifier_modes = [
+                HUMIDIFIER_OFF_MODE,
+                HUMIDIFIER_AUTO_MODE,
+                HUMIDIFIER_MANUAL_MODE,
+            ]
+
         self.update_without_throttle = False
 
     async def async_update(self):
@@ -414,6 +422,11 @@ class Thermostat(ClimateEntity):
             self.thermostat["settings"]["hasHumidifier"]
             and self.thermostat["settings"]["humidifierMode"] == HUMIDIFIER_MANUAL_MODE
         )
+
+    @property
+    def humidifier_modes(self):
+        """Return the available humidifier modes."""
+        return self._humidifier_modes
 
     @property
     def humidifier_mode(self) -> Optional[str]:
@@ -548,6 +561,7 @@ class Thermostat(ClimateEntity):
             "equipment_running": status,
             "fan_min_on_time": self.thermostat["settings"]["fanMinOnTime"],
             "humidifier_mode": self.humidifier_mode,
+            "humidifier_modes": self.humidifier_modes,
         }
 
     @property
@@ -816,11 +830,7 @@ class Thermostat(ClimateEntity):
 
     def set_humidifier_mode(self, humidifier_mode):
         """Set humidifier mode (auto, off, manual)."""
-        if humidifier_mode.lower() not in (
-            HUMIDIFIER_AUTO_MODE,
-            HUMIDIFIER_MANUAL_MODE,
-            HUMIDIFIER_OFF_MODE,
-        ):
+        if humidifier_mode.lower() not in (self.humidifier_modes):
             raise ValueError(
                 f"Invalid humidifier_mode value: {humidifier_mode}  Valid values are 'auto', 'off', or 'manual'"
             )
