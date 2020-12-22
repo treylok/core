@@ -47,6 +47,7 @@ ATTR_END_TIME = "end_time"
 ATTR_FAN_MIN_ON_TIME = "fan_min_on_time"
 ATTR_FAN_MODE = "fan_mode"
 ATTR_HEAT_TEMP = "heat_temp"
+ATTR_HUMIDIFIER_MODE = "humidifier_mode"
 ATTR_RESUME_ALL = "resume_all"
 ATTR_START_DATE = "start_date"
 ATTR_START_TIME = "start_time"
@@ -67,7 +68,9 @@ PRESET_SLEEP = "sleep"
 
 DEFAULT_MIN_HUMIDITY = 15
 DEFAULT_MAX_HUMIDITY = 50
+HUMIDIFIER_AUTO_MODE = "auto"
 HUMIDIFIER_MANUAL_MODE = "manual"
+HUMIDIFIER_OFF_MODE = "off"
 
 
 # Order matters, because for reverse mapping we don't want to map HEAT to AUX
@@ -110,6 +113,7 @@ SERVICE_DELETE_VACATION = "delete_vacation"
 SERVICE_RESUME_PROGRAM = "resume_program"
 SERVICE_SET_FAN_MIN_ON_TIME = "set_fan_min_on_time"
 SERVICE_SET_DST_MODE = "set_dst_mode"
+SERVICE_SET_HUMIDIFIER_MODE = "set_humidifier_mode"
 SERVICE_SET_MIC_MODE = "set_mic_mode"
 SERVICE_SET_OCCUPANCY_MODES = "set_occupancy_modes"
 
@@ -271,6 +275,12 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     )
 
     platform.async_register_entity_service(
+        SERVICE_SET_HUMIDIFIER_MODE,
+        {vol.Optional(ATTR_HUMIDIFIER_MODE): cv.string},
+        "set_humidifier_mode",
+    )
+
+    platform.async_register_entity_service(
         SERVICE_SET_MIC_MODE,
         {vol.Required(ATTR_MIC_ENABLED): cv.boolean},
         "set_mic_mode",
@@ -406,6 +416,14 @@ class Thermostat(ClimateEntity):
         )
 
     @property
+    def humidifier_mode(self) -> Optional[str]:
+        """Return the humidifier mode."""
+        if not self.thermostat["settings"]["hasHumidifier"]:
+            return None
+
+        return self.thermostat["settings"]["humidifierMode"]
+
+    @property
     def target_humidity(self) -> Optional[int]:
         """Return the desired humidity set point."""
         if self.has_humidifier_control:
@@ -529,6 +547,7 @@ class Thermostat(ClimateEntity):
             ],
             "equipment_running": status,
             "fan_min_on_time": self.thermostat["settings"]["fanMinOnTime"],
+            "humidifier_mode": self.humidifier_mode,
         }
 
     @property
@@ -794,6 +813,25 @@ class Thermostat(ClimateEntity):
     def set_dst_mode(self, dst_enabled):
         """Enable/disable automatic daylight savings time."""
         self.data.ecobee.set_dst_mode(self.thermostat_index, dst_enabled)
+
+    def set_humidifier_mode(self, humidifier_mode):
+        """Set humidifier mode (auto, off, manual)."""
+        if humidifier_mode.lower() not in (
+            HUMIDIFIER_AUTO_MODE,
+            HUMIDIFIER_MANUAL_MODE,
+            HUMIDIFIER_OFF_MODE,
+        ):
+            raise ValueError(
+                f"Invalid humidifier_mode value: {humidifier_mode}  Valid values are 'auto', 'off', or 'manual'"
+            )
+
+        if not self.thermostat["settings"]["hasHumidifier"]:
+            raise Exception(
+                "Cannot set humidifier mode since no humidifier is installed."
+            )
+
+        self.data.ecobee.set_humidifier_mode(self.thermostat_index, humidifier_mode)
+        self.update_without_throttle = True
 
     def set_mic_mode(self, mic_enabled):
         """Enable/disable Alexa mic (only for Ecobee 4)."""
