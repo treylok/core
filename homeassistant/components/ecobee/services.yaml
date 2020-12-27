@@ -12,26 +12,26 @@ create_vacation:
       example: "Skiing"
     cool_temp:
       description: Cooling temperature during the vacation (required).
-      example: 23
+      example: 90
     heat_temp:
       description: Heating temperature during the vacation (required).
-      example: 25
+      example: 65
     start_date:
       description: >-
         Date the vacation starts in the YYYY-MM-DD format (optional, immediately if not provided along with
         start_time, end_date, and end_time).
-      example: "2019-03-15"
+      example: "'2021-03-15'"
     start_time:
       description: Time the vacation starts, in the local time of the thermostat, in the 24-hour format "HH:MM:SS"
-      example: "20:00:00"
+      example: "'20:00:00'"
     end_date:
       description: >-
         Date the vacation ends in the YYYY-MM-DD format (optional, 14 days from now if not provided along with
         start_date, start_time, and end_time).
-      example: "2019-03-20"
+      example: "'2021-03-20'"
     end_time:
       description: Time the vacation ends, in the local time of the thermostat, in the 24-hour format "HH:MM:SS"
-      example: "20:00:00"
+      example: "'20:00:00'"
     fan_mode:
       description: Fan mode of the thermostat during the vacation (auto or on) (optional, auto if not provided).
       example: "on"
