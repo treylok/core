@@ -1,6 +1,7 @@
 """Support for ecobee."""
 import asyncio
 from datetime import timedelta
+import time
 
 from pyecobee import ECOBEE_API_KEY, ECOBEE_REFRESH_TOKEN, Ecobee, ExpiredTokenError
 import voluptuous as vol
@@ -19,6 +20,7 @@ from .const import (
 )
 
 MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=180)
+ACCESS_TOKEN_EXPIRE_INTERVAL = 3600 - MIN_TIME_BETWEEN_UPDATES.total_seconds() - 60
 
 CONFIG_SCHEMA = vol.Schema(
     {DOMAIN: vol.Schema({vol.Optional(CONF_API_KEY): cv.string})}, extra=vol.ALLOW_EXTRA
@@ -83,6 +85,7 @@ class EcobeeData:
 
     def __init__(self, hass, entry, api_key, refresh_token):
         """Initialize the Ecobee data object."""
+        self.last_access_token_update = 0
         self._hass = hass
         self._entry = entry
         self.ecobee = Ecobee(
@@ -92,6 +95,10 @@ class EcobeeData:
     @Throttle(MIN_TIME_BETWEEN_UPDATES)
     async def update(self):
         """Get the latest data from ecobee.com."""
+        if int(time.time()) - self.last_access_token_update >= ACCESS_TOKEN_EXPIRE_INTERVAL:
+            _LOGGER.debug("Refreshing ecobee tokens before expiration")
+            if not await self.refresh():
+                _LOGGER.error("Error refreshing ecobee tokens before expiration")
         try:
             await self._hass.async_add_executor_job(self.ecobee.update)
             _LOGGER.debug("Updating ecobee")
@@ -110,6 +117,7 @@ class EcobeeData:
                     CONF_REFRESH_TOKEN: self.ecobee.config[ECOBEE_REFRESH_TOKEN],
                 },
             )
+            self.last_access_token_update = int(time.time())
             return True
         _LOGGER.error("Error refreshing ecobee tokens")
         return False
